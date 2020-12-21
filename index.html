@@ -75,7 +75,7 @@
       </div>
 
       
-    <hr id='obj'>
+    <hr id="obj">
 
       <div style="text-align:center;">
           <!--
@@ -265,7 +265,7 @@ while [ $run_code == $1 ];do
     # "Karaoke!" title and Tone animation
     sudo python3 title_tone.py &
     # pygame GUI
-    sudo python3 song_choice.py > song_choice.txt
+    sudo python3 song_choice.py &gt; song_choice.txt
     filename="song_choice.txt"
     # Read the song choice
     while read line
@@ -306,7 +306,7 @@ while [ $run_code == $1 ];do
             video_id="006"
             break
         fi
-    done < "$filename"
+    done &lt; "$filename"
     # Create output wavfile
     output_wavfile="Video${video_id}_$(date "+%Y.%m.%d-%H.%M.%S").wav"; 
     rm -rf $output_wavfile
@@ -321,7 +321,7 @@ while [ $run_code == $1 ];do
     arecord -D plughw:0,0 -f S32_LE -d `printf "%.0f" $(echo "$videolen" | bc)` user_recordings/$output_wavfile
     sleep 1
     # Score algorithm
-    python3 grade.py $output_wavfile $input_mp4file > grade.txt &
+    python3 grade.py $output_wavfile $input_mp4file &gt; grade.txt &
     # Display the score on the LED
     sudo python3 show_grade.py
 done
@@ -406,33 +406,33 @@ while run_code:
     else:
         pos=newpos
     try:
-        if int(grade)>=0:
+        if int(grade)&gt;=0:
             run_code=False
             break
     except:
         # "Karaoke!" title
-        if k<=9:
+        if k&lt;=9:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k>10 and k<=19:
+        elif k&gt;10 and k&lt;=19:
             len=graphics.DrawText(offscreen_canvas,font,1,10,orange,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k>20 and k<=29:
+        elif k&gt;20 and k&lt;=29:
             len=graphics.DrawText(offscreen_canvas,font,1,15,red,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k>30 and k<=39:
+        elif k&gt;30 and k&lt;=39:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k>40 and k<=49:
+        elif k&gt;40 and k&lt;=49:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             len=graphics.DrawText(offscreen_canvas,font,1,10,orange,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k>50 and k<=59:
+        elif k&gt;50 and k&lt;=59:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             len=graphics.DrawText(offscreen_canvas,font,1,10,orange,title_text)
             len=graphics.DrawText(offscreen_canvas,font,1,15,red,title_text)
@@ -444,7 +444,7 @@ while run_code:
         if k==60:
             time.sleep(0.2)
         #tone animation
-        if k>60 and k <=79:
+        if k&gt;60 and k &lt;=79:
             for j in staff_y:
                     for i in range(0,32):
                         canvas.SetPixel(i,j,128,0,128)
@@ -474,7 +474,7 @@ while run_code:
             time.sleep(0.2)
             canvas.Clear()
         k+=1
-        if k>79:
+        if k&gt;79:
             k=1
 sys.exit(0)
 ######################################################################
@@ -562,30 +562,30 @@ while run_code:
         if event.type is MOUSEBUTTONUP:
             x,y=pygame.mouse.get_pos()
             if level==1:
-                if x<=220 and x>=140 and y<=180 and y>=80:
+                if x&lt;=220 and x&gt;=140 and y&lt;=180 and y&gt;=80:
                     level=2
-                if x<=3000 and x>=280 and y<=220 and y>=200:
+                if x&lt;=3000 and x&gt;=280 and y&lt;=220 and y&gt;=200:
                     run_code=False
                     play_song=0
             elif level==2:
-                if x>=60 and x<=100:
-                    if y>=20 and y<=60:
+                if x&gt;=60 and x&lt;=100:
+                    if y&gt;=20 and y&lt;=60:
                         play_song=6
-                    elif y>=100 and y<=140:
+                    elif y&gt;=100 and y&lt;=140:
                         play_song=5
-                    elif y>=180 and y<=220:
+                    elif y&gt;=180 and y&lt;=220:
                         play_song=4
-                elif x>=200 and x<=240:
-                    if y>=20 and y<=60:
+                elif x&gt;=200 and x&lt;=240:
+                    if y&gt;=20 and y&lt;=60:
                         play_song=3
-                    elif y>=100 and y<=140:
+                    elif y&gt;=100 and y&lt;=140:
                         play_song=2
-                    elif y>=180 and y<=220:
+                    elif y&gt;=180 and y&lt;=220:
                         play_song=1
-                elif x<=300 and x>=280 and y<=220 and y>=200:
+                elif x&lt;=300 and x&gt;=280 and y&lt;=220 and y&gt;=200:
                     run_code=False
                     play_song=0
-                elif x<=40 and x>=0 and y<=220 and y>=200:
+                elif x&lt;=40 and x&gt;=0 and y&lt;=220 and y&gt;=200:
                     level=1
     screen.fill(black_)
     # Design buttons
@@ -725,7 +725,7 @@ while data != '':
     matrix=calculate_levels(data_int,CHUNK,RATE)
     canvas.Clear()
     for y in range(0,32):
-        if matrix[y]>16:
+        if matrix[y]&gt;16:
             matrix[y]=16
         c1=random.randint(0,255)
         c2=random.randint(0,255)
@@ -814,7 +814,7 @@ score_title2="IS"
 bye="BYE"
 load_text="Loading"
 while True:
-     if time.time()-start_time>60:
+     if time.time()-start_time&gt;60:
          break
      try:
         grade=inputedFile.readline()
@@ -841,7 +841,7 @@ while True:
         offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
         time.sleep(1.5)
         offscreen_canvas.Clear()
-        if int(score_text)>60:
+        if int(score_text)&gt;60:
             score_comment="Good Job"
         else:
             score_comment="Nice Try"
@@ -895,9 +895,9 @@ import numpy as np
 #to run the program, type "python3 score.py $output_wavfile $input_mp4file" on the command line or in the Shell script
 
 #min 3 arguments needed
-if len(sys.argv) < 3:
+if len(sys.argv) &lt; 3:
     sys.exit()
-#if >=3 arguments, great! Read the src_file (arg1) and ref_file (arg2)
+#if &gt;=3 arguments, great! Read the src_file (arg1) and ref_file (arg2)
 else:
     src_file = 'user_recordings/' + sys.argv[1]
     ref_file = re.sub('\.mp4', '.wav', sys.argv[2])
@@ -923,13 +923,13 @@ df=data_ref_df.iloc[0::10,:].join(data_src_df,how='outer').apply(pd.Series.inter
 #we calculate the score based on the minimum of the song time and the user's recording duration
 #nominally these times should be the same
 run_time = min(max(data_ref_df.index), max(data_src_df.index))
-df = df.loc[df.index <= run_time]
+df = df.loc[df.index &lt;= run_time]
 
 #correlation score
 correlation = 50 * min(np.abs(df.corr().iloc[0,1]), 0.03) / 0.03
 #persistence score
-persistence = 50 * df.loc[np.abs(df['src']) > 0.1 * np.max(np.abs(df['src']))].shape[0] / \
-                   df.loc[np.abs(df['ref']) > 0.1 * np.max(np.abs(df['ref']))].shape[0]
+persistence = 50 * df.loc[np.abs(df['src']) &gt; 0.1 * np.max(np.abs(df['src']))].shape[0] / \
+                   df.loc[np.abs(df['ref']) &gt; 0.1 * np.max(np.abs(df['ref']))].shape[0]
 #sum the 2 scores (total is out of 100)
 score = int(round(correlation + persistence))
 print(score)
