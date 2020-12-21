@@ -1,192 +1,249 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>index</title>
-<link href="CCS/headingstyle.css" rel="stylesheet" type="text/css">
-<link href="CCS/codestyle.css" rel="stylesheet" type="text/css">
-<link href="CCS/tablestyle.css" rel="stylesheet" type="text/css">
-</head>
 
-<body>
-<header><h1 id="heading">Raspberry Pi Karaoke System</h1>
-</header>
-<p>Jiaqi Sun (js3599) and Pranav Gupta (ppg22)</p>
-<figure style="text-align: center">
-	<iframe width="420" height="315"
-		src="https://www.youtube.com/embed/tgbNymZ7vqY">
-	</iframe>
-	<!--
-  <video width="800" controls="controls" >
-    <source src="https://youtu.be/jg65MVMoTA8" type="video/mp4">
-  </video>
-  -->
-</figure>
-<h2>Objectives</h2>
-<p>&nbsp;As internet services are increasingly becoming available to all regions of the world, we face an unprecedented task of overcoming barriers such as language, so as to provide cutting edge quality content to each person on the planet. Artificial intelligence (AI) technologies such as speech recognition, which are a key to this transformation, require a diverse training corpus such as speech recordings, which aren't widely available for many world languages. By building a simple and easy-to-use karaoke system, we can crowdsource a speech-to-text corpus that can be used to train AI models, e.g., speech recognition.</p>
-<figure style="text-align: center"><img src="Figure/figurepobjective.PNG" alt="" width="458" height="274" class="image"/>
-  <figcaption>Figure 1 General View of the System</figcaption>
-</figure>
-<h2>Introduction</h2>
-<p>There are around 6500 languages in the world. Unfortunately, a lot of artificial intelligence technology today exists only in major languages like English, Spanish, Mandarin (Chinese), etc. A major barrier to the development of artificial intelligence technology in all the other languages is the lack of training data. However, data collection is an expensive task, and we must invent ways to continuously collect and refine training data, while minimizing the cognitive load on people contributing to training data for AI models. To this end, we propose to create a Raspberry Pi karaoke system that displays song lyrics on the piTFT screen and records speech input from users listening to the karaoke track through an earphone connected to the Pi. A PiTFT screen, a LED panel, a microphone, and an earphone are the primary components of the Karaoke System. After a user chooses a song on the GUI displayed on the piTFT, the music video is played on the piTFT and the real-time frequency spectrum of the music playback is displayed on the LED panel. The user can listen to the music from the earphone and sing to the microphone. The singing is recorded with the microphone and after the song is finished, the singing is scored based on its correlation and consistency with the playback. The voice recording would be then uploaded to the cloud along with other user and song metadata, which could be used to further train an automatic speech recognition (ASR) deep learning model on the cloud. 
-Our goal is to create a diverse and high quality voice to text training corpus for ASR by engaging users in a fun task such as karaoke singing in languages that have musical content with the corresponding lyrics but an immature ASR technology. This helps in appealing to a broader audience, in contrast with current mechanisms such as Amazon Mechanical Turk that impose a huge cognitive load on contributors.
-</p>
-<h2>Design and Testing</h2>
-<h3>LED display</h3>
-<p>The LED panel we used is the Medium 16x32 RGB LED matrix panel produced by Adafruit. The panel requires 12 digital pins, 6 pins for color data and 6 pins for control, and a 5V power supply. The pins are connected directly to the GPIO pins on the RPi. Although the pins require 5V logic input, and the RPi outputs 3.3V logic, the 3.3V logic is enough to trigger. A 5V 2A charger supplies power to the LED panel through a 2.1mm to Screw Jack Adapter. We used the LED-matrix library provided by Henner Zeller on Github to help control the display of the LED.  The figure shows how the pins and GPIO pins are connected based on the settings of the library</p>
-<figure style="text-align: center"><img src="Figure/figure2.PNG" width="410" height="359" alt=""/>
-<figcaption>Figure 2 LED panel pins mapping</figcaption></figure>
-<p>A few changes were made in the samplebase.py script in the python/samples subdirectory. The size of the matrix was changed to 16x32. There was only one panel in the chain. The brightness was changed to level 50. The LED GPIO mapping was changed to ‘adafruit-hat’, because we used Adafruit HAT default configuration for GPIO mapping. We also changed the --led-slowdown-gpio to 4 to slow down the speed of data output.</p>
-<p>To display words on the LED panel, the function graphics.DrawText was used that displays words on the specific position of the LED with colors. The graphics.DrawLine function was used to display graphics on the LED panel. We used the two functions to display the “Karaoke” title, a tone animation, and scores on the LED. The following figures show the display of the words and graphics.</p>
-<figure>
-  <pre>
-    <code>
-graphics.DrawLine(canvas,5,h,5,h+7,misty_rose)
-graphics.DrawText(offscreen_canvas,font,2,10,gold,score_title1)
-    </code>
-  </pre>
-</figure>
-<figure style="text-align: center"><img src="Figure/figure3.PNG" width="329" height="494" alt=""/>
-<figcaption>Figure 3 LED display</figcaption></figure>
-<h3>Spectrum Display</h3>
-<p>The frequency spectrum is being displayed while the music playback is being played. We used the wave module to open the audio file of the music and read 4096 frames of audio from the file. The struct.unpack function was used to unpack the data. We then used numpy.fft.rfft function to compute the discrete Fourier transform of the data, stored the output and had them ready to be displayed on the LED. To make the spectrum be displayed in real-time, we used the pyaudio module to play the audio file of the music. As the audio data was played by the pyaudio, the spectrum of the data was calculated and displayed on the LED. We used the SetPixel function of the LED-matrix library to display the spectrum. The figure shows the spectrum display.</p>
-<figure style="text-align: center"><img src="Figure/figure4.PNG" width="400" height="213" alt=""/>
-<figcaption>Figure 4 Spectrum display</figcaption></figure>
-<h3>GUI</h3>
-<p>The GUI on piTFT is achieved by the Pygame module. The pygame.event.get function detects the mouse movement. The following functions add buttons and text on the screen. There are two levels: The start level and the Song choice level. The Start level contains a Start button at the center of the screen and an EXIT button at the right bottom of the screen. The Start button leads to the second level and the EXIT button terminates the program. The second level contains six buttons each corresponding to one song, BACK button, and EXIT button. Pressing the song buttons leads to the playback on the piTFT and the spectrum display of the song. The BACK button returns the GUI back to the first level. The figures show the first and second levels of the GUI.
-</p>
-<figure style="text-align: center"><img src="Figure/figure5.PNG" width="396" height="301" alt=""/>
-<figcaption>Figure 5 GUI level 1</figcaption></figure>
-<figure style="text-align: center"><img src="Figure/figure6.PNG" width="372" height="272" alt=""/>
-<figcaption>Figure 6 GUI level 2</figcaption></figure>
-<p>The labels in blue circles on the piTFT screen are the 6 songs we curated for our Karaoke system. 3 of the 6 songs are from high resource languages, whereas the rest are from low resource languages. Here is a list of the songs:
-</p>
-<figure style="text-align: center">
-  <table style="text-align: center">
-    <tbody>
-      <tr>
-        <td style="text-align: center">"Morning": Morning Song in Cherokee</td>
-      </tr>
-      <tr>
-        <td style="text-align: center;">"Despacito": Despacito in Spanish</td>
-      </tr>
-      <tr>
-        <td style="text-align: center">"Lao Shu": Lao Shu in Mandarin (Chinese)</td>
-      </tr>
-      <tr>
-        <td style="text-align: center">"Nayan": Nayan Ne Bandh Rakhine in Gujarati</td>
-      </tr>
-      <tr>
-        <td style="text-align: center">"Twinkle": Twinkle Twinkle Little Star in English</td>
-      </tr>
-      <tr>
-        <td style="text-align: center">"Man Udhan": Man Udhan Varyache in Marathi</td>
-      </tr>
-    </tbody>
-  </table>
-</figure>
-<h3>Scoring Algorithm</h3>
-<p>While the purpose of our device is to collect training data for speech recognition AI models, in order to incentivize good recording practices for our users, we score user recordings based on their consistency and singing. We define consistency by the fraction of the time users are making some attempt to sing while the song is also going on. In most songs, the lyrics correspond to the high amplitude regions of the spectrum. 
-</p>
-<p>So we can find out the consistency of the user by figuring out the fraction of the time they were singing, i.e., amplitude was above a threshold, and divide it by the fraction of the time the playback had an amplitude beyond a threshold. We scale this fraction up to a maximum of 50 points, by multiplying the fraction by 50. We also calculate the cross-correlation between the playback (reference) and the user recording (source). Due to noise this correlation cannot be expected to be perfect, even for a good singer. Therefore we set a maximum of 0.03 correlation, above which the user gets a maximum score of 50. If the correlation turns out to be below 0.03 in magnitude, then we scale down the score appropriately. Finally, the sum of the correlation score (out of 50) and the persistence score (also out of 50) is displayed on the LED panel.
-</p>
-<h3>Combine each section</h3>
-<p>All the scripts are combined in a bash script. The “Karaoke” title and the GUI are run first. After a song is chosen, the choice is written to a text file. The bash file reads the text file to find the song that is chosen, gets the mp4 and wav file of the song ready, and creates a record file for the user. The spectrum script in the meantime reads the choice from the text file and plays the playback and displays the spectrum in the background. The music video of the song is run by mplayer as well. The length of the song is calculated and the singing is only recorded for the amount of time. After the song is finished, the score is calculated and displayed on the LED.
-</p>
-<figure>
-  <pre>
-    <code>
-videolen=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $input_mp4file`
-sudo SDL_VIDEODRIVER=fbcon SDL_FBDEV=/dev/fb1 mplayer -vo sdl:driver=fbcon -ao alsa:device=hw=0.0 -framedrop $input_mp4file  &
-arecord -D plughw:0,0 -f S32_LE -d `printf "%.0f" $(echo "$videolen" | bc)` user_recordings/$output_wavfile
-    </code>
-  </pre>
-</figure>
-<h3>Issues</h3>
-<h4>Issue 1</h4>
-<p>Each section ran pretty well but there were problems combining them together. Both the music video and the pyaudio play audio. And the built-in audio of the Raspberry Pi was disabled as required by the LED-matrix library. To make sure that the two audio plays didn’t conflict, we used two audio adapters with one of them outputs the pyaudio audio and the other outputs the audio of the music video.</p>
-<h4>Issue 2</h4>
-<p>Because the RPi is required to control the LED panel and piTFT at the same time, some funny things happened when we ran them together. At first, we put both the pygame and the “Karaoke” title in the same script. This causes that the pygame cannot be initialized without being interrupted by the keyboard. It also influences the mplayer as well. Even though the program is terminated, the mplayer cannot be run after the program. We solved the problem by splitting the pygame and the “Karaoke” title into two different scripts. </p>
-<h3>Testing</h3>
-<p>We designed each program separately and tested the programs by running them multiple times and fixing any problem. After all the programs were designed and tested, we combined them in the same bash file and ran all the programs together, problems showed up and are described in the issue section. We ran the bash file and solved the problems.</p>
-<h2>Result</h2>
-<p>Everything performed as planned. The pygame, LED panel, mplayer, recording, and scoring algorithm ran smoothly. For the “Karaoke” title and the pygame GUI, they are displayed after the program is started. The “Karaoke!” animation runs first, then the tone animation runs and loops back to the “Karaoke!” animation. Meanwhile, the Start button is displayed on the piTFT. Pressing the Start button leads to six song buttons. The GUI returns to the first level by pressing the BACK button and the program quits by pressing the EXIT button. Both the spectrum and the music video are displayed after one song is chosen. The microphone records the singing. A “Loading” text is displayed on the LED after the song finishes. Finally, the score is displayed on the LED after it’s calculated. The program automatically loops back to the “Karaoke”, after the score is displayed. Our team meet all the goals outlined in the description 
-</p>
-<figure style="text-align: center">
-  <p><img src="Figure/figure7.PNG" width="400" height="213" alt=""/>
-  </p>
-  <figcaption>    Figure 6 The whole Karaoke System    </figcaption>
-</figure>
-<h2>Conclusion</h2>
-<p>We achieve all the goals listed in the objectives and all the sections end up running smoothly. One major conclusion we learned is that combining two different modules in the same scripts and running them together causes something wrong with the RPi. The initialization of the pygame and mplayer are affected. Another thing we learned is that the root kills the process by force if the process takes too much memory of the RPi.
-</p>
-<h2>Future Work</h2>
-<p>If we have more time, we could improve the GUI system of the program. We plan to add more GPIO pin buttons to the system so that we could pause and resume the music video and spectrum display. The music video can be paused and resumed by FIFO file control. The spectrum display can be paused and resumed by a callback function. The singing is recorded to a wav file first. We plan to display the spectrum of the singing if there is a way to acquire the audio sample in real-time.</p>
-<h2>Part List</h2>
-<table>
-  <tbody>
-    <tr>
-      <td>Item</td>
-      <td>Price</td>
-    </tr>
-    <tr>
-      <td>Raspberry Pi 4 model B</td>
-      <td>$35</td>
-    </tr>
-    <tr>
-      <td>
-320x240 2.8" TFT+Touchscreen for Raspberry Pi
-</td>
-      <td>$34.95</td>
-    </tr>
-    <tr>
-      <td>Medium 16x32 RGB LED matrix panel</td>
-      <td>$24.95</td>
-    </tr>
-    <tr>
-      <td>Sabrent Aluminum USB External Stereo Sound Adapter</td>
-      <td>$7.99</td>
-    </tr>
-    <tr>
-      <td>Universal 5v 2a Power Supply with 8 Tips Switching Connector</td>
-      <td>$10.99</td>
-    </tr>
-    <tr>
-      <td>12V DC Power Connector 5.5mm x 2.1mm</td>
-      <td>$7.49</td>
-    </tr>
-    <tr>
-      <td>Breadboard and Wires</td>
-      <td>$0</td>
-    </tr>
-	<tr>
-      <td>USB Microphone</td>
-      <td>$20</td>
-    </tr>
-  </tbody>
-</table>
-<h2>Reference</h2>
-<table>
-  <tbody>
-    <tr>
-      <td><a href="https://github.com/hzeller/rpi-rgb-led-matrix">LED-matrix library by Henner Zeller</a></td>
-    </tr>
-    <tr>
-      <td><a href="https://learn.adafruit.com/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi/overview">Connecting a 16x32 RGB LED Matrix Panel to a Raspberry Pi by Simon Monk</a></td>
-    </tr>
-    <tr>
-      <td><a href="https://cdn-shop.adafruit.com/product-files/420/P420_Indoor-P6-8S-16x32-SMD3528.pdf">16x32 RGB LED Matrix Panel datasheet</a></td>
-    </tr>
-    <tr>
-      <td><a href="https://pinout.xyz/pinout/pitft_plus_35">PiTFT Plus 3.5' Pinout</a></td>
-    </tr>
-  </tbody>
-</table>
-<h2>Code Appendix</h2>
-<figure>
-  <figcaption>    Combine.sh    </figcaption>
-  <pre>
-    <code>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Raspberry Pi Karaoke!</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="starter-template.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Raspberry Pi Karaoke!</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#intro">Introduction</a></li>
+            <li><a href="#obj">Project Objective</a></li>
+            <li><a href="#design">Design</a></li>
+            <li><a href="#drawings">Drawings</a></li>
+            <li><a href="#testing">Testing</a></li>
+            <li><a href="#result">Result</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container">
+
+      <div class="starter-template">
+        <h1>Raspberry Pi Karaoke!</h1>
+        <p class="lead">Jiaqi Sun (js3599)<br>Pranav Gupta (ppg22)</p>
+      </div>
+
+      <hr>
+      <div class="center-block">
+          <iframe width="640" height="360" src="https://youtu.be/jg65MVMoTA8" allowfullscreen></iframe>
+          <h4 style="text-align:center;">Demonstration Video</h4>
+      </div>
+
+      
+    <hr id='obj'>
+
+      <div style="text-align:center;">
+          <!--
+           <div class="col-md-4" style="text-align:center;"> 
+          <img class="img-rounded" src="pics/1.jpg" alt="Generic placeholder image" width="240" height="240">
+          </div>
+          <div class="col-md-8" style="font-size:18px;"> 
+          -->
+          
+          <h2>Project Objective</h2>
+          <p style="text-align: left;padding: 0px 30px;">As internet services are increasingly becoming available to all regions of the world, we face an unprecedented task of overcoming barriers such as language, so as to provide cutting edge quality content to each person on the planet. Artificial intelligence (AI) technologies such as speech recognition, which are a key to this transformation, require a diverse training corpus such as speech recordings, which aren't widely available for many world languages. By building a simple and easy-to-use karaoke system, we can crowdsource a speech-to-text corpus that can be used to train AI models, e.g., speech recognition. </p>
+          </div>
+      </div>
+
+    <hr id="intro">
+
+      <div style="text-align:center;">
+              <h2>Introduction</h2>
+              <p style="text-align: left;padding: 0px 30px;">There are around 6500 languages in the world. Unfortunately, a lot of artificial intelligence technology today exists only in major languages like English, Spanish, Mandarin (Chinese), etc. A major barrier to the development of artificial intelligence technology in all the other languages is the lack of training data. However, data collection is an expensive task, and we must invent ways to continuously collect and refine training data, while minimizing the cognitive load on people contributing to training data for AI models. To this end, we propose to create a Raspberry Pi karaoke system that displays song lyrics on the piTFT screen and records speech input from users listening to the karaoke track through an earphone connected to the Pi. A PiTFT screen, a LED panel, a microphone, and an earphone are the primary components of the Karaoke System. After a user chooses a song on the GUI displayed on the piTFT, the music video is played on the piTFT and the real-time frequency spectrum of the music playback is displayed on the LED panel. The user can listen to the music from the earphone and sing to the microphone. The singing is recorded with the microphone and after the song is finished, the singing is scored based on its correlation and consistency with the playback. The voice recording would be then uploaded to the cloud along with other user and song metadata, which could be used to further train an automatic speech recognition (ASR) deep learning model on the cloud. 
+Our goal is to create a diverse and high quality voice to text training corpus for ASR by engaging users in a fun task such as karaoke singing in languages that have musical content with the corresponding lyrics but an immature ASR technology. This helps in appealing to a broader audience, in contrast with current mechanisms such as Amazon Mechanical Turk that impose a huge cognitive load on contributors.</p>
+      </div>
+      <div style="text-align:center;">
+              <img class="img-rounded" src="pics/mainpic.png" alt="Generic placeholder image" style="width:40%;">
+              <h4>Raspberry Pi Karaoke Schematic</h4>
+      </div>
+
+    <hr id='design'>
+
+      <div style="text-align:center;">
+              <h2>Design</h2>
+              <h3>LED display:</h3>
+               <p style="text-align: left;padding: 20px 30px;">The LED panel we used is the Medium 16x32 RGB LED matrix panel produced by Adafruit. The panel requires 12 digital pins, 6 pins for color data and 6 pins for control, and a 5V power supply. The pins are connected directly to the GPIO pins on the RPi. Although the pins require 5V logic input, and the RPi outputs 3.3V logic, the 3.3V logic is enough to trigger. A 5V 2A charger supplies power to the LED panel through a 2.1mm to Screw Jack Adapter. We used the LED-matrix library provided by Henner Zeller on Github to help control the display of the LED.  The figure shows how the pins and GPIO pins are connected based on the settings of the library.
+A few changes were made in the samplebase.py script in the python/samples subdirectory. The size of the matrix was changed to 16x32. There was only one panel in the chain. The brightness was changed to level 50. The LED GPIO mapping was changed to ‘adafruit-hat’, because we used Adafruit HAT default configuration for GPIO mapping. We also changed the --led-slowdown-gpio to 4 to slow down the speed of data output.</p>
+
+      <div style="text-align:center;">
+              <img class="img-rounded" src="pics/ledcontrols.png" alt="Generic placeholder image" style="width:40%;">
+              <h4><u>LED panel pins mapping</u></h4>
+      </div>
+
+              <p style="text-align: left;padding: 0px 30px;">A few changes were made in the samplebase.py script in the python/samples subdirectory. The size of the matrix was changed to 16x32. There was only one panel in the chain. The brightness was changed to level 50. The LED GPIO mapping was changed to ‘adafruit-hat’, because we used Adafruit HAT default configuration for GPIO mapping. We also changed the --led-slowdown-gpio to 4 to slow down the speed of data output.</p>
+              <img class="img-rounded" src="pics/ledpy.png" alt="Generic placeholder image" style="width:80%;">
+              <h4><u>LED control Python script</u></h4>
+              
+              <p>To display words on the LED panel, the function graphics.DrawText was used that displays words on the specific position of the LED with colors. The graphics.DrawLine function was used to display graphics on the LED panel. We used the two functions to display the “Karaoke” title, a tone animation, and scores on the LED. The following figures show the display of the words and graphics.</p>
+              <img class="img-rounded" src="pics/scores.png" alt="Generic placeholder image" style="width:40%;">
+              <h4><u>LED display</u></h4>
+              <h3>Spectrum display:</h3>
+            <p>The frequency spectrum is being displayed while the music playback is being played. We used the wave module to open the audio file of the music and read 4096 frames of audio from the file. The struct.unpack function was used to unpack the data. We then used numpy.fft.rfft function to compute the discrete Fourier transform of the data, stored the output and had them ready to be displayed on the LED. To make the spectrum be displayed in real-time, we used the pyaudio module to play the audio file of the music. As the audio data was played by the pyaudio, the spectrum of the data was calculated and displayed on the LED. We used the SetPixel function of the LED-matrix library to display the spectrum. The figure shows the spectrum display.</p>
+            <img class="img-rounded" src="pics/spectrum.png" alt="Generic placeholder image" style="width:40%;">
+            <h4><u>Spectrum display</u></h4>
+            <h3>GUI:</h3>
+            <p>The GUI on piTFT is achieved by the Pygame module. The pygame.event.get function detects the mouse movement. The following functions add buttons and text on the screen.</p>
+            <p>There are two levels: The start level and the Song choice level. The Start level contains a Start button at the center of the screen and an EXIT button at the right bottom of the screen. The Start button leads to the second level and the EXIT button terminates the program. The second level contains six buttons each corresponding to one song, BACK button, and EXIT button. Pressing the song buttons leads to the playback on the piTFT and the spectrum display of the song. The BACK button returns the GUI back to the first level. The figures show the first and second levels of the GUI.</p>
+            <img class="img-rounded" src="pics/guilevel1.png" alt="Generic placeholder image" style="width:20%;">
+            <h4><u>GUI level 1</u></h4>
+            <img class="img-rounded" src="pics/guilevel2.png" alt="Generic placeholder image" style="width:20%;">
+            <h4><u>GUI level 2</u></h4>
+            <p> The labels in blue circles on the piTFT screen are the 6 songs we curated for our Karaoke system. 3 of the 6 songs are from high resource languages, whereas the rest are from low resource languages. Here is a list of the songs:
+            <ul>
+                <li>"Morning": Morning Song in Cherokee
+                <li>"Despacito": Despacito in Spanish
+                <li>"Lao Shu": Lao Shu in Mandarin (Chinese)
+                <li>"Nayan": Nayan Ne Bandh Rakhine in Gujarati
+                <li>"Twinkle": Twinkle Twinkle Little Star in English
+                <li>"Man Udhan": Man Udhan Varyache in Marathi
+            </ul>
+
+      
+            <h3>Scoring Algorithm:</h3>
+            <p> While the purpose of our device is to collect training data for speech recognition AI models, in order to incentivize good recording practices for our users, we score user recordings based on their consistency and singing. We define consistency by the fraction of the time users are making some attempt to sing while the song is also going on. In most songs, the lyrics correspond to the high amplitude regions of the spectrum. So we can find out the consistency of the user by figuring out the fraction of the time they were singing, i.e., amplitude was above a threshold, and divide it by the fraction of the time the playback had an amplitude beyond a threshold. We scale this fraction up to a maximum of 50 points, by multiplying the fraction by 50. We also calculate the cross-correlation between the playback (reference) and the user recording (source). Due to noise this correlation cannot be expected to be perfect, even for a good singer. Therefore we set a maximum of 0.03 correlation, above which the user gets a maximum score of 50. If the correlation turns out to be below 0.03 in magnitude, then we scale down the score appropriately. Finally, the sum of the correlation score (out of 50) and the persistence score (also out of 50) is displayed on the LED panel. </p>
+            <h3>Combine all sections into one program:</h3>
+            <p> All the scripts are combined in a bash script. The “Karaoke” title and the GUI are run first. After a song is chosen, the choice is written to a text file. The bash file reads the text file to find the song that is chosen, gets the mp4 and wav file of the song ready, and creates a record file for the user. The spectrum script in the meantime reads the choice from the text file and plays the playback and displays the spectrum in the background. The music video of the song is run by mplayer as well. The length of the song is calculated and the singing is only recorded for the amount of time. After the song is finished, the score is calculated and displayed on the LED.</p>
+            <h3>Issues:</h3>
+            <p> Issue 1: Each section ran pretty well but there were problems combining them together. Both the music video and the pyaudio play audio. And the built-in audio of the Raspberry Pi was disabled as required by the LED-matrix library. To make sure that the two audio plays didn’t conflict, we used two audio adapters with one of them outputs the pyaudio audio and the other outputs the audio of the music video. </p>
+            <p> Issue 2: Because the RPi is required to control the LED panel and piTFT at the same time, some funny things happened when we ran them together. At first, we put both the pygame and the “Karaoke” title in the same script. This causes that the pygame cannot be initialized without being interrupted by the keyboard. It also influences the mplayer as well. Even though the program is terminated, the mplayer cannot be run after the program. We solved the problem by splitting the pygame and the “Karaoke” title into two different scripts. </p>
+            
+        </div>      
+    
+    <hr id='testing'>
+
+      <div style="text-align:center;">
+              <h2>Testing</h2>
+              <p style="text-align: left;padding: 0px 30px;">We designed each program separately and tested the programs by running them multiple times and fixing any problem. After all the programs were designed and tested, we combined them in the same bash file and ran all the programs together, problems showed up and are described in the issue section. We ran the bash file and solved the problems.</p>
+      </div>
+
+    <hr id='result'>
+
+      <div style="text-align:center;">
+              <h2>Results</h2>
+              <p style="text-align: left;padding: 0px 30px;">Everything performed as planned. The pygame, LED panel, mplayer, recording, and scoring algorithm ran smoothly. For the “Karaoke” title and the pygame GUI, they are displayed after the program is started. The “Karaoke!” animation runs first, then the tone animation runs and loops back to the “Karaoke!” animation. Meanwhile, the Start button is displayed on the piTFT. Pressing the Start button leads to six song buttons. The GUI returns to the first level by pressing the BACK button and the program quits by pressing the EXIT button. Both the spectrum and the music video are displayed after one song is chosen. The microphone records the singing. A “Loading” text is displayed on the LED after the song finishes. Finally, the score is displayed on the LED after it’s calculated. The program automatically loops back to the “Karaoke”, after the score is displayed. Our team meet all the goals outlined in the description.</p>
+      </div>
+
+
+
+    <hr id='conclusion'>
+
+      <div style="text-align:center;">
+              <h2>Conclusion</h2>
+              <p style="text-align: left;padding: 0px 30px;">We achieved all the goals listed in the objectives and all the sections end up running smoothly. One major conclusion we learned is that combining two different modules in the same scripts and running them together causes something wrong with the RPi. The initialization of the pygame and mplayer are affected. Another thing we learned is that the root kills the process by force if the process takes too much memory of the RPi.</p>
+      </div>
+
+    <hr id='futurework'>
+
+      <div style="text-align:center;">
+              <h2>Future Work</h2>
+              <p style="text-align: left;padding: 0px 30px;">If we have more time, we could improve the GUI system of the program. We plan to add more GPIO pin buttons to the system so that we could pause and resume the music video and spectrum display. The music video can be paused and resumed by FIFO file control. The spectrum display can be paused and resumed by a callback function. The singing is recorded to a wav file first. We plan to display the spectrum of the singing if there is a way to acquire the audio sample in real-time.</p>
+      </div>
+
+    <hr>
+
+
+
+    <div class="row" style="text-align:center;">
+          <h2>Work Distribution</h2>
+          <!-- 
+          <div style="text-align:center;">
+              <img class="img-rounded" src="pics/group.jpg" alt="Generic placeholder image" style="width:80%;">
+              <h4>Project group picture</h4>
+          </div>
+          -->
+          <div class="col-md-6" style="font-size:16px">
+              <!--<img class="img-rounded" src="pics/a.png" alt="Generic placeholder image" width="240" height="240"> -->
+              <h3>Jiaqi</h3>
+              <p class="lead">js3599@cornell.edu</p>
+              <p>Design LED display (“Karaoke” title, spectrum display and score display)
+              <p>Design Pygame GUI
+              <p>Write combine.sh bash script
+          </div>
+          <div class="col-md-6" style="font-size:16px">
+              <!-- <img class="img-rounded" src="pics/b.png" alt="Generic placeholder image" width="240" height="240"> -->
+              <h3>Pranav</h3>
+              <p class="lead">ppg22@cornell.edu</p>
+              <p>Designed scoring algorithm
+              <p>Preprocessed videos into wav files so that future processing can happen
+              <p>Set up arecord and mplayer for playing the karaoke video and listening to the user voice input 
+          </div>
+      </div>
+
+    <hr>
+      <div style="font-size:18px">
+          <h2>Parts List</h2>
+          <ul>
+              <li>Raspberry Pi 4 (given)</li>
+              <li>320x240 2.8" TFT+Touchscreen for Raspberry Pi (given)</li>
+              <li>Medium 16x32 RGB LED matrix panel $25</li>
+              <li>USB Microphone (used) $5</li>
+              <li>12V DC Power Connector 5.5mm x 2.1mm $7.5</li>
+              <li>Universal 5v 2a Power Supply with 8 Tips Switching Connector $11</li>              
+              <li>abrent Aluminum USB External Stereo Sound Adapter $8</li>
+
+              
+          </ul>
+          <h3>Total: $56.5 (excluding RPi and piTFT)</h3>
+      </div>
+      <hr>
+      <div style="font-size:18px">
+          <h2>References</h2>
+          <a href="https://github.com/hzeller/rpi-rgb-led-matrix">LED-matrix library by Henner Zeller</a><br>
+          <a href=" https://learn.adafruit.com/connecting-a-16x32-rgb-led-matrix-panel-to-a-raspberry-pi/overview">Connecting a 16x32 RGB LED Matrix Panel to a Raspberry Pi by Simon Monk</a><br>
+          <a href="https://cdn-shop.adafruit.com/product-files/420/P420_Indoor-P6-8S-16x32-SMD3528.pdf"> 16x32 RGB LED Matrix Panel datasheet </a><br>
+          <a href="http://abyz.co.uk/rpi/pigpio/">Pigpio Library</a><br>
+          <a href="https://pinout.xyz/pinout/pitft_plus_35">PiTFT Plus 3.5'' pinout</a><br>
+      </div>
+
+    <hr>
+
+      <div class="row">
+              <h2>Code Appendix</h2>
+              <pre><code>
+
+
 ######################################################################
 #
 # File: combine.sh
@@ -202,76 +259,69 @@ arecord -D plughw:0,0 -f S32_LE -d `printf "%.0f" $(echo "$videolen" | bc)` user
 ######################################################################
 run_code=$1
 while [ $run_code == $1 ];do
-	# "Karaoke!" title and Tone animation
-	sudo python3 title_tone.py &
-	# pygame GUI
-	sudo python3 song_choice.py &gt; song_choice.txt
-	filename="song_choice.txt"
-	# Read the song choice
-	while read line
-	do
-		echo "$line"
-		if [ "$line" = "0" ]; then
-			exit 1
-		fi
-		if [ "$line" = "1" ]; then
-			input_mp4file="video_1/001_ManUdhanMarathi.mp4"
-			video_id="001"
-			break
-		fi
-		if [ "$line" = "2" ]; then
-			input_mp4file="video_1/002_NayanGujarati.mp4"
-			video_id="002"
-			break
-		fi
-		if [ "$line" = "3" ]; then
-			input_mp4file="video_1/003_DespacitoSpanish.mp4"
-			video_id="003"
-			break
-		fi
-		if [ "$line" = "4" ]; then
-			input_mp4file="video_1/004_Twinkle.mp4"
-			input_mp4file_1="video/004_Twinkle.mp4"
-			video_id="004"
-			break
-		fi
-		if [ "$line" = "5" ]; then
-			input_mp4file="video_1/005_LaoShuMandarin.mp4"
-			input_mp4file_1="video/005_LaoShuMandarin.mp4"
-			video_id="005"
-			break
-		fi
-		if [ "$line" = "6" ]; then
-			input_mp4file="video_1/006_MorningCherokee.mp4"
-			video_id="006"
-			break
-		fi
-	done $lt "$filename"
-	# Create output wavfile
-	output_wavfile="Video${video_id}_$(date "+%Y.%m.%d-%H.%M.%S").wav"; 
-	rm -rf $output_wavfile
-	# Spectrum display
-	sudo python3 spectrum.py &
-	sleep 1.3
-	# Calculate the length of the music video
-	videolen=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $input_mp4file`
-	# Mplayer the music video
-	sudo SDL_VIDEODRIVER=fbcon SDL_FBDEV=/dev/fb1 mplayer -vo sdl:driver=fbcon -ao alsa:device=hw=0.0 -framedrop $input_mp4file  &
-	# Record the singing
-	arecord -D plughw:0,0 -f S32_LE -d `printf "%.0f" $(echo "$videolen" | bc)` user_recordings/$output_wavfile
-	sleep 1
-	# Score algorithm
-	python3 grade.py $output_wavfile $input_mp4file &gt; grade.txt &
-	# Display the score on the LED
-	sudo python3 show_grade.py
+    # "Karaoke!" title and Tone animation
+    sudo python3 title_tone.py &
+    # pygame GUI
+    sudo python3 song_choice.py > song_choice.txt
+    filename="song_choice.txt"
+    # Read the song choice
+    while read line
+    do
+        echo "$line"
+        if [ "$line" = "0" ]; then
+            exit 1
+        fi
+        if [ "$line" = "1" ]; then
+            input_mp4file="video_1/001_ManUdhanMarathi.mp4"
+            video_id="001"
+            break
+        fi
+        if [ "$line" = "2" ]; then
+            input_mp4file="video_1/002_NayanGujarati.mp4"
+            video_id="002"
+            break
+        fi
+        if [ "$line" = "3" ]; then
+            input_mp4file="video_1/003_DespacitoSpanish.mp4"
+            video_id="003"
+            break
+        fi
+        if [ "$line" = "4" ]; then
+            input_mp4file="video_1/004_Twinkle.mp4"
+            input_mp4file_1="video/004_Twinkle.mp4"
+            video_id="004"
+            break
+        fi
+        if [ "$line" = "5" ]; then
+            input_mp4file="video_1/005_LaoShuMandarin.mp4"
+            input_mp4file_1="video/005_LaoShuMandarin.mp4"
+            video_id="005"
+            break
+        fi
+        if [ "$line" = "6" ]; then
+            input_mp4file="video_1/006_MorningCherokee.mp4"
+            video_id="006"
+            break
+        fi
+    done < "$filename"
+    # Create output wavfile
+    output_wavfile="Video${video_id}_$(date "+%Y.%m.%d-%H.%M.%S").wav"; 
+    rm -rf $output_wavfile
+    # Spectrum display
+    sudo python3 spectrum.py &
+    sleep 1.3
+    # Calculate the length of the music video
+    videolen=`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $input_mp4file`
+    # Mplayer the music video
+    sudo SDL_VIDEODRIVER=fbcon SDL_FBDEV=/dev/fb1 mplayer -vo sdl:driver=fbcon -ao alsa:device=hw=0.0 -framedrop $input_mp4file  &
+    # Record the singing
+    arecord -D plughw:0,0 -f S32_LE -d `printf "%.0f" $(echo "$videolen" | bc)` user_recordings/$output_wavfile
+    sleep 1
+    # Score algorithm
+    python3 grade.py $output_wavfile $input_mp4file > grade.txt &
+    # Display the score on the LED
+    sudo python3 show_grade.py
 done
-    </code>
-  </pre>
-</figure>
-<figure>
-  <figcaption>    title_tone.py  </figcaption>
-  <pre>
-    <code>
 ######################################################################
 #
 # File: title_tone.py
@@ -353,33 +403,33 @@ while run_code:
     else:
         pos=newpos
     try:
-        if int(grade)&gt;=0:
+        if int(grade)>=0:
             run_code=False
             break
     except:
         # "Karaoke!" title
-        if k&lt;=9:
+        if k<=9:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k&gt; 10 and k&lt;=19:
+        elif k>10 and k<=19:
             len=graphics.DrawText(offscreen_canvas,font,1,10,orange,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k&gt; 20 and k&lt;=29:
+        elif k>20 and k<=29:
             len=graphics.DrawText(offscreen_canvas,font,1,15,red,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k&gt; 30 and k&lt;=39:
+        elif k>30 and k<=39:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k&gt; 40 and k&lt;=49:
+        elif k>40 and k<=49:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             len=graphics.DrawText(offscreen_canvas,font,1,10,orange,title_text)
             offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
             time.sleep(0.05)
-        elif k&gt; 50 and k&lt;=59:
+        elif k>50 and k<=59:
             len=graphics.DrawText(offscreen_canvas,font,1,5,yellow,title_text)
             len=graphics.DrawText(offscreen_canvas,font,1,10,orange,title_text)
             len=graphics.DrawText(offscreen_canvas,font,1,15,red,title_text)
@@ -391,7 +441,7 @@ while run_code:
         if k==60:
             time.sleep(0.2)
         #tone animation
-        if k&gt;60 and k &lt;=79:
+        if k>60 and k <=79:
             for j in staff_y:
                     for i in range(0,32):
                         canvas.SetPixel(i,j,128,0,128)
@@ -421,16 +471,9 @@ while run_code:
             time.sleep(0.2)
             canvas.Clear()
         k+=1
-        if k&gt; 79:
+        if k>79:
             k=1
 sys.exit(0)
-    </code>
-  </pre>
-</figure>
-<figure>
-  <figcaption>    song_choice.py  </figcaption>
-  <pre>
-    <code>
 ######################################################################
 #
 # File: song_choice.py
@@ -516,30 +559,30 @@ while run_code:
         if event.type is MOUSEBUTTONUP:
             x,y=pygame.mouse.get_pos()
             if level==1:
-                if x&lt;=220 and x&gt;=140 and y&lt;=180 and y&gt;=80:
+                if x<=220 and x>=140 and y<=180 and y>=80:
                     level=2
-                if x&lt;=3000 and x&gt;=280 and y&lt;=220 and y&gt;=200:
+                if x<=3000 and x>=280 and y<=220 and y>=200:
                     run_code=False
                     play_song=0
             elif level==2:
-                if x&gt;=60 and x&lt;=100:
-                    if y&gt;=20 and y&lt;=60:
+                if x>=60 and x<=100:
+                    if y>=20 and y<=60:
                         play_song=6
-                    elif y&gt;=100 and y&lt;=140:
+                    elif y>=100 and y<=140:
                         play_song=5
-                    elif y&gt;=180 and y&lt;=220:
+                    elif y>=180 and y<=220:
                         play_song=4
-                elif x&gt;=200 and x&lt;=240:
-                    if y&gt;=20 and y&lt;=60:
+                elif x>=200 and x<=240:
+                    if y>=20 and y<=60:
                         play_song=3
-                    elif y&gt;=100 and y&lt;=140:
+                    elif y>=100 and y<=140:
                         play_song=2
-                    elif y&gt;=180 and y&lt;=220:
+                    elif y>=180 and y<=220:
                         play_song=1
-                elif x&lt;=300 and x&gt;=280 and y&lt;=220 and y&gt;=200:
+                elif x<=300 and x>=280 and y<=220 and y>=200:
                     run_code=False
                     play_song=0
-                elif x&lt;=40 and x&gt;=0 and y&lt;=220 and y&gt;=200:
+                elif x<=40 and x>=0 and y<=220 and y>=200:
                     level=1
     screen.fill(black_)
     # Design buttons
@@ -579,13 +622,6 @@ while run_code:
 os.environ.clear()
 pygame.quit()
 exit()
-    </code>
-  </pre>
-</figure>
-<figure>
-  <figcaption>    spectrum.py  </figcaption>
-  <pre>
-    <code>
 ######################################################################
 #
 # File: spectrum.py
@@ -686,7 +722,7 @@ while data != '':
     matrix=calculate_levels(data_int,CHUNK,RATE)
     canvas.Clear()
     for y in range(0,32):
-        if matrix[y]&gt; 16:
+        if matrix[y]>16:
             matrix[y]=16
         c1=random.randint(0,255)
         c2=random.randint(0,255)
@@ -705,80 +741,6 @@ stream.close()
 p.terminate()
 wf.close()
 sys.exit(0)
-    </code>
-  </pre>
-</figure>
-<figure>
-  <figcaption>    grade.py  </figcaption>
-  <pre>
-    <code>    
-######################################################################
-#
-# File: grade.py
-#
-# Authors: Pranav Gupta (ppg22)
-#
-# Date: 12/19/2020
-#
-# Brief: Calculate the score of the singing based on coreelation
-#        consistensy.
-#
-######################################################################
-import sys, re 
-import soundfile as sf
-import pandas as pd
-import numpy as np
-
-#src_file: user recording
-#ref_file: video from the user
-#to run the program, type "python3 score.py $output_wavfile $input_mp4file" on the command line or in the Shell script
-
-#min 3 arguments needed
-if len(sys.argv) &lt; 3:
-    sys.exit()
-#if &gt;=3 arguments, great! Read the src_file (arg1) and ref_file (arg2)
-else:
-    src_file = 'user_recordings/' + sys.argv[1]
-    ref_file = re.sub('\.mp4', '.wav', sys.argv[2])
-
-#print the file names, before starting the scoring process
-print('Input file: ',src_file,' Output File: ', ref_file)
-
-#read the source and reference files
-data_src, samplerate_src = sf.read(src_file)
-data_ref, samplerate_ref = sf.read(ref_file)
-
-#choose the first channel from the reference audio, discard the rest
-data_ref = data_ref[:,0]
-
-#define pandas dataframes with the appropriate time index
-data_ref_df = pd.DataFrame({'ref':data_ref}, index = np.arange(len(data_ref)) / samplerate_ref)
-data_src_df = pd.DataFrame({'src':data_src}, index = np.arange(len(data_src)) / samplerate_src)
-
-#"outer" join the 2 data frames and then interpolate to fill in the gaps
-#df = data_ref_df.join(data_src_df, how='outer').apply(pd.Series.interpolate)
-df=data_ref_df.iloc[0::10,:].join(data_src_df,how='outer').apply(pd.Series.interpolate)
-#find the max run times of each video, take the minimum
-#we calculate the score based on the minimum of the song time and the user's recording duration
-#nominally these times should be the same
-run_time = min(max(data_ref_df.index), max(data_src_df.index))
-df = df.loc[df.index &lt;= run_time]
-
-#correlation score
-correlation = 50 * min(np.abs(df.corr().iloc[0,1]), 0.03) / 0.03
-#persistence score
-persistence = 50 * df.loc[np.abs(df['src']) &gt; 0.1 * np.max(np.abs(df['src']))].shape[0] / \
-                   df.loc[np.abs(df['ref']) &gt; 0.1 * np.max(np.abs(df['ref']))].shape[0]
-#sum the 2 scores (total is out of 100)
-score = int(round(correlation + persistence))
-print(score)
-    </code>
-  </pre>
-</figure>
-<figure>
-  <figcaption>    show_grade.py    </figcaption>
-  <pre>
-    <code>
 ######################################################################
 #
 # File: show_grade.py
@@ -849,7 +811,7 @@ score_title2="IS"
 bye="BYE"
 load_text="Loading"
 while True:
-     if time.time()-start_time&gt; 60:
+     if time.time()-start_time>60:
          break
      try:
         grade=inputedFile.readline()
@@ -876,7 +838,7 @@ while True:
         offscreen_canvas=canvas.SwapOnVSync(offscreen_canvas)
         time.sleep(1.5)
         offscreen_canvas.Clear()
-        if int(score_text) &gt; 60:
+        if int(score_text)>60:
             score_comment="Good Job"
         else:
             score_comment="Nice Try"
@@ -907,35 +869,82 @@ while True:
 inputedFile.close()
 inputedFile=open(file,"w")
 inputedFile.truncate()
-    </code>
-  </pre>
-</figure>
-<h2>Work Contribution and Contact</h2>
-<table>
-  <tbody>
-    <tr>
-      <td style="text-align: center"><a href="mailto:js3599@cornell.edu">Jiaqi Sun (js3599)</a></td>
-      <td style="text-align: center"><a href="mailto:ppg22@cornell.edu">Pranav Gupta (ppg22)</a></td>
-    </tr>
-    <tr>
-      <td style="text-align: center">Design LED display (“Karaoke” title, spectrum display and score display)</td>
-      <td style="text-align: center">Design scoring algorithm
-</td>
-    </tr>
-    <tr>
-      <td style="text-align: center">Design Pygame GUI
-</td>
-      <td style="text-align: center">Preprocessing of videos into wav files so that future processing can happen
-</td>
-    </tr>
-    <tr>
-      <td style="text-align: center">Write Combine.sh bash script</td>
-      <td style="text-align: center">Setting up arecord and mplayer for playing the karaoke video and listening to the user voice input </td>
-    </tr>
-  </tbody>
-</table>
-<h2>Acknowledgement</h2>
-<p>Highly appreciate Professor Joseph Skovira and ECE5725 TAs for helpful guides. They helped a lot in providing information and result examination in the process of project development. It's an interesting course and we have learned a lot about embedded system design.
-</p>
-</body>
-</html>	
+
+######################################################################
+#
+# File: grade.py
+#
+# Authors: Pranav Gupta (ppg22)
+#
+# Date: 12/19/2020
+#
+# Brief: Calculate the score of the singing based on coreelation
+#        consistensy.
+#
+######################################################################
+import sys, re 
+import soundfile as sf
+import pandas as pd
+import numpy as np
+
+#src_file: user recording
+#ref_file: video from the user
+#to run the program, type "python3 score.py $output_wavfile $input_mp4file" on the command line or in the Shell script
+
+#min 3 arguments needed
+if len(sys.argv) < 3:
+    sys.exit()
+#if >=3 arguments, great! Read the src_file (arg1) and ref_file (arg2)
+else:
+    src_file = 'user_recordings/' + sys.argv[1]
+    ref_file = re.sub('\.mp4', '.wav', sys.argv[2])
+
+#print the file names, before starting the scoring process
+print('Input file: ',src_file,' Output File: ', ref_file)
+
+#read the source and reference files
+data_src, samplerate_src = sf.read(src_file)
+data_ref, samplerate_ref = sf.read(ref_file)
+
+#choose the first channel from the reference audio, discard the rest
+data_ref = data_ref[:,0]
+
+#define pandas dataframes with the appropriate time index
+data_ref_df = pd.DataFrame({'ref':data_ref}, index = np.arange(len(data_ref)) / samplerate_ref)
+data_src_df = pd.DataFrame({'src':data_src}, index = np.arange(len(data_src)) / samplerate_src)
+
+#"outer" join the 2 data frames and then interpolate to fill in the gaps
+#df = data_ref_df.join(data_src_df, how='outer').apply(pd.Series.interpolate)
+df=data_ref_df.iloc[0::10,:].join(data_src_df,how='outer').apply(pd.Series.interpolate)
+#find the max run times of each video, take the minimum
+#we calculate the score based on the minimum of the song time and the user's recording duration
+#nominally these times should be the same
+run_time = min(max(data_ref_df.index), max(data_src_df.index))
+df = df.loc[df.index <= run_time]
+
+#correlation score
+correlation = 50 * min(np.abs(df.corr().iloc[0,1]), 0.03) / 0.03
+#persistence score
+persistence = 50 * df.loc[np.abs(df['src']) > 0.1 * np.max(np.abs(df['src']))].shape[0] / \
+                   df.loc[np.abs(df['ref']) > 0.1 * np.max(np.abs(df['ref']))].shape[0]
+#sum the 2 scores (total is out of 100)
+score = int(round(correlation + persistence))
+print(score)
+              </code></pre>
+      </div>
+
+    </div><!-- /.container -->
+
+
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="dist/js/bootstrap.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script> -->
+  </body>
+</html>
